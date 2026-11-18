@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Larkin Log">
+<meta name="theme-color" content="#121417">
+<title>Larkin Climbing Log</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#121417;--card:#1b1e23;--card2:#23272e;--line:#2d323a;
+  --text:#eef0f2;--muted:#9aa1ab;--chalk:#d8f26b;--chalk-ink:#1a1f0a;
+  --proj:#f0a347;--sent:#5fcf86;--flash:#f5d547;--none:#6b727c;
+  --r:16px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,sans-serif;font-size:15px}
+body{padding:calc(env(safe-area-inset-top) + 12px) 16px calc(env(safe-area-inset-bottom) + 32px)}
+h1,h2,.num,.grade{font-family:"Space Grotesk",Inter,sans-serif}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.wrap{max-width:560px;margin:0 auto}
+
+header{display:flex;align-items:flex-end;justify-content:space-between;margin:4px 2px 14px}
+header h1{font-size:26px;margin:0;letter-spacing:-.5px}
+header p{margin:2px 0 0;color:var(--muted);font-size:13px}
+
+.banner{display:none;background:#3a2a12;color:#ffd9a3;border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:13px}
+.banner.show{display:block}
+
+.stats{background:var(--card);border-radius:var(--r);padding:16px;display:grid;grid-template-columns:96px 1fr;gap:16px;align-items:center}
+.ring{position:relative;width:96px;height:96px}
+.ring svg{transform:rotate(-90deg)}
+.ring .num{position:absolute;inset:0;display:grid;place-items:center;font-size:24px;font-weight:700}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.kpi .v{font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-size:20px;font-weight:700}
+.kpi .l{color:var(--muted);font-size:12px}
+
+.pyramid{background:var(--card);border-radius:var(--r);padding:14px 16px;margin-top:12px}
+.pyramid h2{font-size:14px;margin:0 0 10px;color:var(--muted);font-weight:600}
+.prow{display:grid;grid-template-columns:38px 1fr 40px;gap:10px;align-items:center;margin:6px 0;font-size:13px}
+.prow .g{font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-weight:600}
+.bar{height:10px;background:var(--card2);border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--sent);border-radius:6px}
+.prow .c{text-align:right;color:var(--muted)}
+
+.controls{margin:18px 0 8px}
+.seg{display:flex;background:var(--card);border-radius:12px;padding:4px;gap:4px}
+.seg button{flex:1;padding:9px 0;border-radius:9px;color:var(--muted);font-weight:600;font-size:13px}
+.seg button.on{background:var(--card2);color:var(--text)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:7px 12px;border-radius:999px;background:var(--card);color:var(--muted);font-size:13px;font-weight:500;border:1px solid var(--line)}
+.chip.on{background:var(--chalk);color:var(--chalk-ink);border-color:var(--chalk)}
+
+.count{color:var(--muted);font-size:12px;margin:10px 2px 6px}
+.list{display:flex;flex-direction:column;gap:8px}
+.route{display:grid;grid-template-columns:8px 58px 1fr auto;align-items:center;gap:12px;background:var(--card);border-radius:14px;padding:12px 14px 12px 0;text-align:left;width:100%}
+.route .stripe{height:100%;min-height:44px;border-radius:0 6px 6px 0}
+.route .grade{font-size:24px;font-weight:700;text-align:center}
+.route .meta b{display:block;font-weight:600}
+.route .meta span{color:var(--muted);font-size:12.5px}
+.pill{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;white-space:nowrap}
+.s-none{background:#2a2e35;color:#b9bec6}
+.s-proj{background:rgba(240,163,71,.18);color:var(--proj)}
+.s-sent{background:rgba(95,207,134,.18);color:var(--sent)}
+.s-flash{background:rgba(245,213,71,.2);color:var(--flash)}
+.empty{color:var(--muted);text-align:center;padding:40px 10px}
+
+.fab{position:fixed;right:20px;bottom:calc(env(safe-area-inset-bottom) + 20px);width:58px;height:58px;border-radius:50%;background:var(--chalk);color:var(--chalk-ink);font-size:30px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.45);display:grid;place-items:center}
+
+.backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .2s}
+.backdrop.show{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:92vh;overflow-y:auto;background:var(--card);border-radius:22px 22px 0 0;padding:10px 18px calc(env(safe-area-inset-bottom) + 20px);transform:translateY(105%);transition:transform .25s ease}
+.sheet.show{transform:none}
+.sheet .inner{max-width:560px;margin:0 auto}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto 12px}
+.shead{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.dot{width:44px;height:44px;border-radius:12px;flex:none}
+.shead .grade{font-size:30px;font-weight:700;line-height:1}
+.shead .sub{color:var(--muted);font-size:13px;margin-top:3px}
+.close{margin-left:auto;width:34px;height:34px;border-radius:50%;background:var(--card2);font-size:18px;color:var(--muted)}
+.label{color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px}
+.sbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sbtn{padding:14px 8px;border-radius:12px;background:var(--card2);font-weight:600;border:2px solid transparent}
+.sbtn.on.s-none{border-color:#b9bec6}
+.sbtn.on.s-proj{border-color:var(--proj)}
+.sbtn.on.s-sent{border-color:var(--sent)}
+.sbtn.on.s-flash{border-color:var(--flash)}
+.stepper{display:flex;align-items:center;gap:12px}
+.stepper button{width:52px;height:52px;border-radius:14px;background:var(--card2);font-size:24px;font-weight:600}
+.stepper .num{font-size:30px;font-weight:700;min-width:48px;text-align:center}
+input,select,textarea{width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:11px 12px;outline:none;-webkit-appearance:none;appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--chalk)}
+textarea{min-height:84px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field span{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
+.swatches{display:flex;flex-wrap:wrap;gap:8px}
+.sw{width:36px;height:36px;border-radius:10px;border:3px solid transparent}
+.sw.on{border-color:var(--text)}
+details{margin-top:16px;background:var(--card2);border-radius:12px;padding:4px 12px}
+details summary{padding:10px 0;font-weight:600;color:var(--muted);list-style:none}
+details summary::-webkit-details-marker{display:none}
+details[open]{padding-bottom:12px}
+.primary{width:100%;margin-top:18px;padding:15px;border-radius:14px;background:var(--chalk);color:var(--chalk-ink);font-weight:700;font-size:16px}
+.primary:disabled{opacity:.4}
+.danger{width:100%;margin-top:12px;padding:12px;border-radius:12px;color:#ff8a80;background:rgba(255,80,70,.08);font-weight:600}
+.danger.arm{background:#c0392b;color:#fff}
+.setter{background:rgba(216,242,107,.1);color:var(--chalk);border-radius:12px;padding:10px 12px;font-size:13.5px;margin-bottom:4px}
+.foot{margin-top:28px;color:var(--muted);font-size:13px}
+.foot p{margin:0 0 10px;line-height:1.45}
+.foot .small{font-size:11.5px;margin-top:14px;text-align:center}
+.ghost{padding:12px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-weight:600;color:var(--text)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 92px);transform:translateX(-50%) translateY(20px);background:#000;color:#fff;padding:10px 14px;border-radius:10px;font-size:13px;opacity:0;transition:all .2s;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Larkin Log</h1>
+      <p>Larkin Community College wall · French grades</p>
+    </div>
+  </header>
+
+  <div class="banner" id="banner">Your browser is blocking storage (Private Browsing?), so progress won't be kept after you close this page.</div>
+
+  <section class="stats">
+    <div class="ring">
+      <svg width="96" height="96" viewBox="0 0 96 96">
+        <circle cx="48" cy="48" r="40" fill="none" stroke="#2a2e35" stroke-width="10"/>
+        <circle id="ringArc" cx="48" cy="48" r="40" fill="none" stroke="var(--chalk)" stroke-width="10" stroke-linecap="round" stroke-dasharray="251.3" stroke-dashoffset="251.3"/>
+      </svg>
+      <div class="num" id="pct">–</div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="v" id="kSent">–</div><div class="l">Sent</div></div>
+      <div class="kpi"><div class="v" id="kFlash">–</div><div class="l">Flashed</div></div>
+      <div class="kpi"><div class="v" id="kProj">–</div><div class="l">Projecting</div></div>
+      <div class="kpi"><div class="v" id="kHard">–</div><div class="l">Hardest send</div></div>
+    </div>
+  </section>
+
+  <section class="pyramid" id="pyramid">
+    <h2>Grade pyramid · sent / total</h2>
+    <div id="pyrRows"></div>
+  </section>
+
+  <section class="controls">
+    <div class="seg" id="sortSeg">
+      <button data-sort="line">By line</button>
+      <button data-sort="easy">Easiest</button>
+      <button data-sort="hard">Hardest</button>
+    </div>
+    <div class="chips" id="typeChips"></div>
+    <div class="chips" id="statusChips"></div>
+  </section>
+
+  <div class="count" id="count"></div>
+  <div class="list" id="list"></div>
+
+  <footer class="foot">
+    <p>Your progress is saved on this phone only. To move it to a new phone, save a backup here and restore it there.</p>
+    <div class="grid2"><button class="ghost" id="exportBtn">Save backup</button><button class="ghost" id="importBtn">Restore backup</button></div>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <button class="danger" id="resetBtn">Clear my progress</button>
+    <p class="small">Routes updated 18 Nov 2026</p>
+  </footer>
+</div>
+
+
+<div class="backdrop" id="backdrop"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"><div class="inner" id="sheetInner"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* Larkin Log — standalone. Route list is built in; progress is saved on this device. */
+const ROUTES=[
+["r01","Overhang",1,"Blue","6b"],["r02","Overhang",1,"Green","6b"],["r03","Overhang",2,"Yellow","6b+"],["r04","Overhang",2,"Orange","7b+"],
+["r05","Overhang",3,"Green","6a"],["r06","Overhang",3,"Blue","7a"],["r07","Overhang",4,"Pink","5c"],["r08","Overhang",4,"Purple","6b"],
+["r09","Vertical",5,"Orange","6a+"],["r10","Vertical",5,"Green","6b"],["r11","Vertical",6,"Pink","6c"],["r12","Vertical",7,"Purple","5a"],
+["r13","Vertical",7,"Blue","6a"],["r14","Slab",8,"Orange","3"],["r15","Slab",8,"Yellow","4"],["r16","Slab",8,"Red","6b+"],
+["r17","Slab",9,"Green","5a"],["r18","Slab",9,"Gray","5c"],["r19","Slab",9,"Blue","6a+"],["r20","Vertical",10,"Yellow","5b"],
+["r21","Vertical",10,"Purple","5c"],["r22","Vertical",10,"Red","6c"],["r23","Gentle Overhang",11,"Gray","6c"],["r24","Gentle Overhang",11,"Yellow","7a"],
+["r25","Gentle Overhang",12,"Purple","6b"],["r26","Gentle Overhang",12,"Yellow","6b+"],["r27","Vertical",13,"Red","4"],["r28","Vertical",13,"Gray","5c"],
+["r29","Vertical",13,"Blue","6a"],["r30","Vertical",14,"Green","6b"],["r31","Vertical",14,"Orange","6b+","6c if features are for feet only"],
+["r32","Overhang",15,"Red","5b"],["r33","Overhang",15,"Yellow","6a"],["r34","Overhang",15,"Blue","6c"]
+].map(([id,type,line,colour,grade,setterNote])=>({id,type,line,colour,grade,setterNote:setterNote||""}));
+
+const GR=["3","4","5a","5b","5c","6a","6a+","6b","6b+","6c","6c+","7a","7a+","7b","7b+","7c","7c+","8a"];
+const rank=g=>GR.indexOf(String(g==null?"":g).trim());
+const COLOURS={Blue:"#3b6fe0",Green:"#3fa35a",Yellow:"#f2d443",Orange:"#ec8f35",Pink:"#ec7fb3",Purple:"#7b45b4",Red:"#d4433b",Gray:"#8a8f98",Black:"#30343a",White:"#f1f1f1"};
+const STATUSES=["Not tried","Projecting","Sent","Flashed"];
+const SCLASS={"Not tried":"s-none","Projecting":"s-proj","Sent":"s-sent","Flashed":"s-flash"};
+const DEF={status:"Not tried",attempts:0,sentDate:null,notes:""};
+const isSent=s=>s==="Sent"||s==="Flashed";
+const $=id=>document.getElementById(id);
+const esc=v=>String(v==null?"":v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const todayISO=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
+const fmtDate=iso=>{if(!iso)return"";const d=new Date(iso+"T12:00:00");return isNaN(d)?iso:d.toLocaleDateString("en-IE",{day:"numeric",month:"short"})};
+const lineNum=l=>{const n=parseFloat(l);return isNaN(n)?9999:n};
+
+let storageOK=true;
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){storageOK=false;return d}},
+          set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){storageOK=false}}};
+const PKEY="larkin-progress-v1";
+let prog=LS.get(PKEY,{});
+const state=Object.assign({sort:"line",type:"All",status:"All"},LS.get("larkin-filters",{}));
+const saveFilters=()=>LS.set("larkin-filters",state);
+const merged=r=>({...r,...DEF,...(prog[r.id]||{})});
+let openId=null,notesTimer=null;
+
+function toast(msg){const t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),2400)}
+function saveProg(id,p){
+  prog[id]={...DEF,...(prog[id]||{}),...p};
+  LS.set(PKEY,prog);
+  if(!storageOK)$("banner").classList.add("show");
+  render();
+}
+
+function render(){
+  const all=ROUTES.map(merged),total=all.length;
+  const sent=all.filter(r=>isSent(r.status));
+  $("pct").textContent=Math.round(sent.length/total*100)+"%";
+  $("ringArc").setAttribute("stroke-dashoffset",String(251.3*(1-sent.length/total)));
+  $("kSent").textContent=sent.length+"/"+total;
+  $("kFlash").textContent=all.filter(r=>r.status==="Flashed").length;
+  $("kProj").textContent=all.filter(r=>r.status==="Projecting").length;
+  $("kHard").textContent=sent.reduce((b,r)=>rank(r.grade)>rank(b)?r.grade:b,null)||"—";
+
+  const byG={};
+  all.forEach(r=>{(byG[r.grade]=byG[r.grade]||{t:0,s:0}).t++;if(isSent(r.status))byG[r.grade].s++;});
+  $("pyrRows").innerHTML=Object.keys(byG).sort((a,b)=>rank(b)-rank(a)).map(g=>{const v=byG[g];return`<div class="prow"><span class="g">${esc(g)}</span><div class="bar"><i style="width:${v.s/v.t*100}%"></i></div><span class="c">${v.s}/${v.t}</span></div>`}).join("");
+
+  document.querySelectorAll("#sortSeg button").forEach(b=>b.classList.toggle("on",b.dataset.sort===state.sort));
+  const types=["All",...Array.from(new Set(all.map(r=>r.type))).sort()];
+  if(!types.includes(state.type))state.type="All";
+  $("typeChips").innerHTML=types.map(t=>`<button class="chip ${t===state.type?"on":""}" data-type="${esc(t)}">${t==="All"?"All walls":esc(t)}</button>`).join("");
+  $("statusChips").innerHTML=["All","To do",...STATUSES.slice(1)].map(s=>`<button class="chip ${s===state.status?"on":""}" data-status="${esc(s)}">${s==="All"?"Any status":esc(s)}</button>`).join("");
+
+  let view=all.filter(r=>(state.type==="All"||r.type===state.type)&&(state.status==="All"||(state.status==="To do"?!isSent(r.status):r.status===state.status)));
+  const byLine=(a,b)=>lineNum(a.line)-lineNum(b.line)||rank(a.grade)-rank(b.grade);
+  if(state.sort==="easy")view.sort((a,b)=>rank(a.grade)-rank(b.grade)||byLine(a,b));
+  else if(state.sort==="hard")view.sort((a,b)=>rank(b.grade)-rank(a.grade)||byLine(a,b));
+  else view.sort(byLine);
+  $("count").textContent=`${view.length} route${view.length===1?"":"s"}`;
+  $("list").innerHTML=view.length?view.map(r=>{
+    const bits=[`Line ${esc(r.line)}`,esc(r.type),r.attempts?`${r.attempts} att.`:"",r.sentDate&&isSent(r.status)?fmtDate(r.sentDate):""].filter(Boolean).join(" · ");
+    return`<button class="route" data-id="${r.id}"><span class="stripe" style="background:${COLOURS[r.colour]}"></span><span class="grade">${esc(r.grade)}</span><span class="meta"><b>${esc(r.colour)}</b><span>${bits}</span></span><span class="pill ${SCLASS[r.status]}">${esc(r.status)}</span></button>`}).join("")
+    :`<div class="empty">Nothing matches these filters.</div>`;
+}
+
+function openSheet(id){openId=id;drawSheet();$("backdrop").classList.add("show");$("sheet").classList.add("show")}
+function closeSheet(){flushNotes();openId=null;$("backdrop").classList.remove("show");$("sheet").classList.remove("show")}
+function drawSheet(){
+  const base=ROUTES.find(r=>r.id===openId);if(!base)return closeSheet();
+  const r=merged(base);
+  $("sheetInner").innerHTML=`<div class="grab"></div>
+    <div class="shead"><div class="dot" style="background:${COLOURS[r.colour]}"></div>
+      <div><div class="grade">${esc(r.grade)}</div><div class="sub">${esc(r.colour)} · Line ${esc(r.line)} · ${esc(r.type)}</div></div>
+      <button class="close" id="closeBtn" aria-label="Close">✕</button></div>
+    ${r.setterNote?`<div class="setter">${esc(r.setterNote)}</div>`:""}
+    <div class="label">Status</div>
+    <div class="sbtns">${STATUSES.map(s=>`<button class="sbtn ${SCLASS[s]} ${s===r.status?"on":""}" data-st="${s}">${s}</button>`).join("")}</div>
+    <div class="label">Attempts</div>
+    <div class="stepper"><button data-step="-1">−</button><span class="num">${r.attempts||0}</span><button data-step="1">+</button></div>
+    ${isSent(r.status)?`<div class="label">Date sent</div><input type="date" id="fDate" value="${esc(r.sentDate||"")}">`:""}
+    <div class="label">My notes</div>
+    <textarea id="fNotes" placeholder="Beta, crux moves, what to try next…">${esc(r.notes||"")}</textarea>`;
+}
+function setStatus(s){
+  const r=merged(ROUTES.find(x=>x.id===openId));if(r.status===s)return;
+  const p={status:s};
+  if(isSent(s)&&!r.sentDate)p.sentDate=todayISO();
+  if(!isSent(s))p.sentDate=null;
+  if(s==="Flashed")p.attempts=1;else if(s==="Sent"&&!(r.attempts>0))p.attempts=1;
+  saveProg(openId,p);drawSheet();
+}
+function flushNotes(){if(notesTimer){clearTimeout(notesTimer);notesTimer=null;const el=$("fNotes");if(el&&openId)saveProg(openId,{notes:el.value})}}
+
+$("sheetInner").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.id==="closeBtn")return closeSheet();
+  if(b.dataset.st)return setStatus(b.dataset.st);
+  if(b.dataset.step){const r=merged(ROUTES.find(x=>x.id===openId));saveProg(openId,{attempts:Math.max(0,(r.attempts||0)+Number(b.dataset.step))});drawSheet()}
+});
+$("sheetInner").addEventListener("change",e=>{if(e.target.id==="fDate")saveProg(openId,{sentDate:e.target.value||null})});
+$("sheetInner").addEventListener("input",e=>{
+  if(e.target.id!=="fNotes")return;
+  clearTimeout(notesTimer);const v=e.target.value,id=openId;
+  notesTimer=setTimeout(()=>{notesTimer=null;saveProg(id,{notes:v})},500);
+});
+$("sortSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;state.sort=b.dataset.sort;saveFilters();render()});
+$("typeChips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;state.type=b.dataset.type;saveFilters();render()});
+$("statusChips").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;state.status=b.dataset.status;saveFilters();render()});
+$("list").addEventListener("click",e=>{const b=e.target.closest(".route");if(b)openSheet(b.dataset.id)});
+$("backdrop").addEventListener("click",closeSheet);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openId)closeSheet()});
+window.addEventListener("pagehide",flushNotes);
+
+/* backup: move progress to a new phone */
+$("exportBtn").addEventListener("click",()=>{
+  const blob=new Blob([JSON.stringify({app:"larkin-log",v:1,saved:new Date().toISOString(),progress:prog},null,1)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="larkin-log-backup.json";
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  toast("Backup saved");
+});
+$("importBtn").addEventListener("click",()=>$("importFile").click());
+$("importFile").addEventListener("change",e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  f.text().then(t=>{
+    const d=JSON.parse(t);
+    if(!d||d.app!=="larkin-log"||typeof d.progress!=="object")throw 0;
+    const ids=new Set(ROUTES.map(r=>r.id));
+    Object.entries(d.progress).forEach(([id,p])=>{if(ids.has(id)&&p&&typeof p==="object")prog[id]={...DEF,status:STATUSES.includes(p.status)?p.status:"Not tried",attempts:Math.max(0,Number(p.attempts)||0),sentDate:typeof p.sentDate==="string"?p.sentDate:null,notes:typeof p.notes==="string"?p.notes:""}});
+    LS.set(PKEY,prog);render();toast("Progress restored");
+  }).catch(()=>toast("That file isn't a Larkin Log backup")).finally(()=>{e.target.value=""});
+});
+$("resetBtn").addEventListener("click",e=>{
+  const b=e.currentTarget;
+  if(!b.classList.contains("arm")){b.classList.add("arm");b.textContent="Tap again to clear everything";setTimeout(()=>{b.classList.remove("arm");b.textContent="Clear my progress"},3000);return}
+  prog={};LS.set(PKEY,prog);render();b.classList.remove("arm");b.textContent="Clear my progress";toast("Progress cleared");
+});
+
+LS.get(PKEY,null);if(!storageOK)$("banner").classList.add("show");
+render();
+</script>
+</body>
+</html>
